@@ -2,7 +2,7 @@ package com.bitwatch.wear.presentation.screens
 
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.wear.compose.material.MaterialTheme
@@ -91,15 +91,15 @@ class MainScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithTag("ModeButton_Actividad").performClick()
+        composeTestRule.onNodeWithContentDescription("Actividad").performClick()
         composeTestRule.waitForIdle()
         assertEquals(Mode.ACTIVITY, selectedMode)
 
-        composeTestRule.onNodeWithTag("ModeButton_Reposo").performClick()
+        composeTestRule.onNodeWithContentDescription("Reposo").performClick()
         composeTestRule.waitForIdle()
         assertEquals(Mode.REST, selectedMode)
 
-        composeTestRule.onNodeWithTag("ModeButton_Normal").performClick()
+        composeTestRule.onNodeWithContentDescription("Normal").performClick()
         composeTestRule.waitForIdle()
         assertEquals(Mode.NORMAL, selectedMode)
     }

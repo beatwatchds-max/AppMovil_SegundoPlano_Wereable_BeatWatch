@@ -12,8 +12,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -38,7 +36,8 @@ private val TextMuted = Color(0xFF9AA5B8)
 fun MainScreen(
     bpm: Int,
     lastReadingTime: Long,
-    onModeSelected: (Mode) -> Unit
+    onModeSelected: (Mode) -> Unit,
+    onNavigateToActivity: () -> Unit = {}
 ) {
     // Estado local para reflejar visualmente el modo activo (botón resaltado)
     var selectedMode by remember { mutableStateOf(Mode.NORMAL) }
@@ -59,9 +58,9 @@ fun MainScreen(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            val bpmFontSize = (maxWidth.value * 0.22f).sp
-            val iconSize = (maxWidth.value * 0.09f).dp
-            val buttonSize = (maxWidth.value * 0.17f).dp
+            val bpmFontSize = (maxWidth.value * 0.16f).sp
+            val iconSize = (maxWidth.value * 0.07f).dp
+            val buttonSize = (maxWidth.value * 0.14f).dp
 
             Column(
                 modifier = Modifier
@@ -85,6 +84,10 @@ fun MainScreen(
                     onModeSelected = { mode ->
                         selectedMode = mode
                         onModeSelected(mode)
+                        // "Actividad" abre la pantalla de sesión con temporizador
+                        if (mode == Mode.ACTIVITY) {
+                            onNavigateToActivity()
+                        }
                     }
                 )
             }
@@ -118,15 +121,15 @@ private fun HeartRateDisplay(
 
         Text(
             text = "bpm",
-            fontSize = 13.sp,
+            fontSize = 11.sp,
             color = TextMuted
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(3.dp))
 
         Text(
             text = elapsedTimeLabel(lastReadingTime),
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             color = TextMuted.copy(alpha = 0.8f),
             textAlign = TextAlign.Center
         )
@@ -180,7 +183,6 @@ private fun ModeButton(
         Button(
             onClick = onClick,
             modifier = Modifier
-                .semantics { testTag = "ModeButton_$label" }
                 .size(size)
                 .then(
                     if (selected) {
@@ -205,7 +207,7 @@ private fun ModeButton(
 
         Text(
             text = label,
-            fontSize = 9.sp,
+            fontSize = 8.sp,
             color = if (selected) BlueAccent else TextMuted
         )
     }

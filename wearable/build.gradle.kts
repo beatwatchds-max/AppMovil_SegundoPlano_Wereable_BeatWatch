@@ -16,6 +16,8 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -51,6 +53,10 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // Material Icons (extended for Bolt, NightsStay, etc.)
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Wear Compose
     implementation("androidx.wear.compose:compose-material:1.3.1")
@@ -71,6 +77,12 @@ dependencies {
 
     // Wearable communication
     implementation("com.google.android.gms:play-services-wearable:19.0.0")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation(composeBom)
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
 }
 
 kapt {

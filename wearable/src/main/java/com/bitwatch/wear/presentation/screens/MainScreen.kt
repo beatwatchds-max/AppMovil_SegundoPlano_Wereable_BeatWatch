@@ -1,21 +1,38 @@
 package com.bitwatch.wear.presentation.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.Composable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.material.*
-import java.text.SimpleDateFormat
-import java.util.*
 
-enum class Mode {
-    REST, ACTIVITY, NORMAL
-}
+enum class Mode { REST, ACTIVITY, NORMAL }
+
+// Paleta basada en el diseño de referencia
+private val OrangeAccent = Color(0xFFFF9800)
+private val BlueAccent = Color(0xFF3D9BFF)
+private val BackgroundCenter = Color(0xFF102040)
+private val BackgroundEdge = Color(0xFF05070F)
+private val ButtonIdleBg = Color(0xFF1A2436)
+private val TextMuted = Color(0xFF9AA5B8)
 
 @Composable
 fun MainScreen(
@@ -23,53 +40,94 @@ fun MainScreen(
     lastReadingTime: Long,
     onModeSelected: (Mode) -> Unit
 ) {
+    // Estado local para reflejar visualmente el modo activo (botón resaltado)
+    var selectedMode by remember { mutableStateOf(Mode.NORMAL) }
+
     Scaffold(
-        timeText = {
-            TimeText()
-        }
+        timeText = { TimeText() }
     ) {
-        ScalingLazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
+        // BoxWithConstraints permite calcular tamaños en función del ancho real
+        // de la pantalla, así el layout se adapta tanto a esferas grandes
+        // (Galaxy Watch Classic, ~1.4") como a otros Wear OS más pequeños o cuadrados.
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(BackgroundCenter, BackgroundEdge)
+                    )
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            item {
-                HeartRateDisplay(bpm = bpm, lastReadingTime = lastReadingTime)
-            }
-            item {
-                ModeRow(onModeSelected = onModeSelected)
+            val bpmFontSize = (maxWidth.value * 0.22f).sp
+            val iconSize = (maxWidth.value * 0.09f).dp
+            val buttonSize = (maxWidth.value * 0.17f).dp
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                HeartRateDisplay(
+                    bpm = bpm,
+                    lastReadingTime = lastReadingTime,
+                    bpmFontSize = bpmFontSize,
+                    iconSize = iconSize
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                ModeRow(
+                    selectedMode = selectedMode,
+                    buttonSize = buttonSize,
+                    onModeSelected = { mode ->
+                        selectedMode = mode
+                        onModeSelected(mode)
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun HeartRateDisplay(bpm: Int, lastReadingTime: Long) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+private fun HeartRateDisplay(
+    bpm: Int,
+    lastReadingTime: Long,
+    bpmFontSize: TextUnit,
+    iconSize: androidx.compose.ui.unit.Dp
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            imageVector = Icons.Filled.Favorite,
+            contentDescription = "Frecuencia cardíaca",
+            tint = OrangeAccent,
+            modifier = Modifier.size(iconSize)
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
         Text(
             text = bpm.toString(),
-            fontSize = 64.sp,
+            fontSize = bpmFontSize,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colors.primary
+            color = OrangeAccent
         )
 
         Text(
-            text = "BPM",
-            fontSize = 14.sp,
-            color = MaterialTheme.colors.onSurfaceVariant
+            text = "bpm",
+            fontSize = 13.sp,
+            color = TextMuted
         )
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
         Text(
-            text = "Última toma: ${timeFormat.format(Date(lastReadingTime))}",
+            text = elapsedTimeLabel(lastReadingTime),
             fontSize = 10.sp,
-            color = MaterialTheme.colors.onSurfaceVariant,
+            color = TextMuted.copy(alpha = 0.8f),
             textAlign = TextAlign.Center
         )
     }
@@ -77,27 +135,34 @@ private fun HeartRateDisplay(bpm: Int, lastReadingTime: Long) {
 
 @Composable
 private fun ModeRow(
+    selectedMode: Mode,
+    buttonSize: androidx.compose.ui.unit.Dp,
     onModeSelected: (Mode) -> Unit
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Top
     ) {
         ModeButton(
+            icon = Icons.Filled.NightsStay,
             label = "Reposo",
-            icon = "\uD83C\uDF19",
+            selected = selectedMode == Mode.REST,
+            size = buttonSize,
             onClick = { onModeSelected(Mode.REST) }
         )
         ModeButton(
+            icon = Icons.Filled.Bolt,
             label = "Actividad",
-            icon = "\u26A1",
+            selected = selectedMode == Mode.ACTIVITY,
+            size = buttonSize,
             onClick = { onModeSelected(Mode.ACTIVITY) }
         )
         ModeButton(
+            icon = Icons.Filled.Person,
             label = "Normal",
-            icon = "\uD83D\uDE46",
+            selected = selectedMode == Mode.NORMAL,
+            size = buttonSize,
             onClick = { onModeSelected(Mode.NORMAL) }
         )
     }
@@ -105,24 +170,56 @@ private fun ModeRow(
 
 @Composable
 private fun ModeButton(
+    icon: ImageVector,
     label: String,
-    icon: String,
+    selected: Boolean,
+    size: androidx.compose.ui.unit.Dp,
     onClick: () -> Unit
 ) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier.size(56.dp)
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Button(
+            onClick = onClick,
+            modifier = Modifier
+                .semantics { testTag = "ModeButton_$label" }
+                .size(size)
+                .then(
+                    if (selected) {
+                        Modifier.border(2.dp, BlueAccent, CircleShape)
+                    } else {
+                        Modifier
+                    }
+                ),
+            colors = ButtonDefaults.buttonColors(
+                backgroundColor = ButtonIdleBg
+            )
         ) {
-            Text(text = icon, fontSize = 18.sp)
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = label,
-                fontSize = 8.sp,
-                textAlign = TextAlign.Center
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (selected) BlueAccent else Color.White,
+                modifier = Modifier.size(size * 0.5f)
             )
         }
+
+        Spacer(modifier = Modifier.height(3.dp))
+
+        Text(
+            text = label,
+            fontSize = 9.sp,
+            color = if (selected) BlueAccent else TextMuted
+        )
+    }
+}
+
+/**
+ * Devuelve una etiqueta de tiempo relativo ("Hace Ns", "Hace Nmin", etc.)
+ * en vez de la hora absoluta, tal como en el diseño de referencia.
+ */
+private fun elapsedTimeLabel(lastReadingTime: Long): String {
+    val diffSeconds = (System.currentTimeMillis() - lastReadingTime) / 1000
+    return when {
+        diffSeconds < 60 -> "Hace ${diffSeconds}s"
+        diffSeconds < 3600 -> "Hace ${diffSeconds / 60}min"
+        else -> "Hace ${diffSeconds / 3600}h"
     }
 }

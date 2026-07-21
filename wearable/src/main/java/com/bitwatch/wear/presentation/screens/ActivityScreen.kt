@@ -9,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.runtime.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +42,18 @@ fun ActivityScreen(
 ) {
     var selectedIntensity by remember { mutableStateOf(Intensity.MODERATE) }
     var isRunning by remember { mutableStateOf(false) }
+    var elapsed by remember { mutableStateOf(elapsedTimeMillis) }
+
+    LaunchedEffect(isRunning) {
+        if (isRunning) {
+            val startMs = System.currentTimeMillis()
+            val initialElapsed = elapsed
+            while (isActive) {
+                delay(100)
+                elapsed = initialElapsed + (System.currentTimeMillis() - startMs)
+            }
+        }
+    }
 
     Scaffold(
         timeText = { TimeText() }
@@ -75,7 +89,7 @@ fun ActivityScreen(
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
-                    text = formatElapsed(elapsedTimeMillis),
+                    text = formatElapsed(elapsed),
                     fontSize = timerFontSize,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -103,7 +117,13 @@ fun ActivityScreen(
 
                 IntensityRow(
                     selected = selectedIntensity,
-                    onIntensitySelected = { selectedIntensity = it }
+                    onIntensitySelected = { intensity ->
+                        selectedIntensity = intensity
+                        if (!isRunning) {
+                            isRunning = true
+                            onStartClick(intensity)
+                        }
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))

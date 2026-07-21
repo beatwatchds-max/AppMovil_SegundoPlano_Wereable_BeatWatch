@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,10 +46,12 @@ fun MainScreen(
     Scaffold(
         timeText = { TimeText() }
     ) {
-        // BoxWithConstraints permite calcular tamaños en función del ancho real
-        // de la pantalla, así el layout se adapta tanto a esferas grandes
-        // (Galaxy Watch Classic, ~1.4") como a otros Wear OS más pequeños o cuadrados.
-        BoxWithConstraints(
+        val screenWidthDp = LocalConfiguration.current.screenWidthDp
+        val bpmFontSize = (screenWidthDp * 0.16f).sp
+        val iconSize = (screenWidthDp * 0.07f).dp
+        val buttonSize = (screenWidthDp * 0.14f).dp
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
@@ -58,10 +61,6 @@ fun MainScreen(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            val bpmFontSize = (maxWidth.value * 0.16f).sp
-            val iconSize = (maxWidth.value * 0.07f).dp
-            val buttonSize = (maxWidth.value * 0.14f).dp
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -84,7 +83,6 @@ fun MainScreen(
                     onModeSelected = { mode ->
                         selectedMode = mode
                         onModeSelected(mode)
-                        // "Actividad" abre la pantalla de sesión con temporizador
                         if (mode == Mode.ACTIVITY) {
                             onNavigateToActivity()
                         }

@@ -42,6 +42,15 @@ android {
     buildFeatures {
         compose = true
     }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/LICENSE-notice.md"
+            excludes += "/META-INF/NOTICE.md"
+        }
+    }
 }
 
 dependencies {
@@ -70,6 +79,9 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
+    // Lifecycle (LifecycleStartEffect, etc.)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.5")
+
     // Hilt
     implementation("com.google.dagger:hilt-android:2.51.1")
     kapt("com.google.dagger:hilt-android-compiler:2.51.1")
@@ -78,11 +90,23 @@ dependencies {
     // Wearable communication
     implementation("com.google.android.gms:play-services-wearable:19.0.0")
 
+    // Coroutines for Guava ListenableFuture (needed for Health Services await)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.9.0")
+
+    // Health Services (sensor de ritmo cardíaco en Wear OS)
+    implementation("androidx.health:health-services-client:1.1.0-rc02")
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
+    implementation("com.google.guava:guava:33.3.1-android")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("io.mockk:mockk:1.13.13")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
 }
 
 kapt {

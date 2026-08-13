@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Dependencias de Gradle (librerías Android/Kotlin)
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "seguridad"
+
+  # Las propias GitHub Actions del workflow (mantenerlas actualizadas también es seguridad)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"

@@ -7,7 +7,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MonitorHeart
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,11 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
 import androidx.wear.compose.material3.Text
-import com.example.heartratemonitor.presentation.presentation.theme.*
 import com.tuempresa.heartratemonitor.ui.theme.BackgroundDark
 import com.tuempresa.heartratemonitor.ui.theme.BlueSelected
 import com.tuempresa.heartratemonitor.ui.theme.CardNavy
@@ -29,11 +31,9 @@ import com.tuempresa.heartratemonitor.ui.theme.OrangeAccent
 
 @Composable
 fun ActivityTimerScreen(
-    currentBpm: Int,
-    elapsedSeconds: Int,
-    onIniciar: (String) -> Unit
+    viewModel: ActivityTimerViewModel = viewModel()
 ) {
-    var selectedIntensity by remember { mutableStateOf("Mod.") }
+    val state by viewModel.uiState.collectAsState()
 
     Box(
         modifier = Modifier
@@ -52,28 +52,53 @@ fun ActivityTimerScreen(
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = formatTime(elapsedSeconds),
+                text = formatTime(state.elapsedSeconds),
                 color = Color.White,
                 fontSize = 40.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = "❤ $currentBpm bpm", color = OrangeAccent, fontSize = 14.sp)
+
+            if (state.sensorAvailable) {
+                Text(text = "❤ ${state.currentBpm} bpm", color = OrangeAccent, fontSize = 14.sp)
+            } else {
+                Text(text = "Sensor no disponible", color = Color.White, fontSize = 11.sp)
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                IntensityChip("Baja", selectedIntensity == "Baja") { selectedIntensity = "Baja" }
-                IntensityChip("Mod.", selectedIntensity == "Mod.") { selectedIntensity = "Mod." }
-                IntensityChip("Alta", selectedIntensity == "Alta") { selectedIntensity = "Alta" }
+                IntensityChip(
+                    label = "Baja",
+                    selected = state.selectedIntensity == "Baja",
+                    onClick = { viewModel.onIntensitySelected("Baja") }
+                )
+                IntensityChip(
+                    label = "Mod.",
+                    selected = state.selectedIntensity == "Mod.",
+                    onClick = { viewModel.onIntensitySelected("Mod.") }
+                )
+                IntensityChip(
+                    label = "Alta",
+                    selected = state.selectedIntensity == "Alta",
+                    onClick = { viewModel.onIntensitySelected("Alta") }
+                )
             }
             Spacer(modifier = Modifier.height(16.dp))
             Button(
-                onClick = { onIniciar(selectedIntensity) },
-                colors = ButtonDefaults.buttonColors(containerColor = GreenBpm),
+                onClick = { viewModel.onIniciarPressed() },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (state.isRunning) Color.Red else GreenBpm
+                ),
                 modifier = Modifier
                     .height(36.dp)
                     .clip(RoundedCornerShape(50))
             ) {
-                Text(text = "INICIAR", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text(
+                    text = if (state.isRunning) "DETENER" else "INICIAR",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp
+                )
             }
         }
     }

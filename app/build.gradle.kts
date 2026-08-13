@@ -68,7 +68,7 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
 
     // Almacenamiento seguro de tokens
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0")
 
     // ViewModel + coroutines en Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")

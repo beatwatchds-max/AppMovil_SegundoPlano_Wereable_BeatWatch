@@ -1,41 +1,76 @@
 package com.example.heartratemonitor.presentation.presentation.data.network
 
 import android.content.Context
-import com.example.heartratemonitor.presentation.presentation.data.local.TokenManager
+import android.util.Log
+import com.example.heartratemonitor.presentation.presentation.data.firebase.FirebaseClient
 import com.example.heartratemonitor.presentation.presentation.data.network.dto.MedicionRequest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-class MedicionesRepository(context: Context) {
+class MedicionesRepository(
+    @Suppress("UNUSED_PARAMETER") context: Context
+) {
 
-    private val tokenManager = TokenManager(context)
-    private val api = RetrofitClient.dispositivosApi
+    private val firebaseApi = FirebaseClient.api
 
-    suspend fun enviarMedicion(bpm: Int, spo2: Int? = null): Result<Unit> {
-        val token = tokenManager.getAccessToken()
-            ?: return Result.failure(IllegalStateException("No hay token guardado"))
-        val idDispositivo = tokenManager.getIdDispositivo()
-            ?: return Result.failure(IllegalStateException("No hay idDispositivo guardado"))
+    suspend fun enviarMedicion(
+        bpm: Int,
+        spo2: Int? = null
+    ): Result<Unit> {
 
-        val timestamp = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        if (bpm !in 20..250) {
+            return Result.failure(
+                IllegalArgumentException("BPM fuera de rango: $bpm")
+            )
+        }
+
+        val timestamp = SimpleDateFormat(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            Locale.US
+        ).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
 
+        val medicion = MedicionRequest(
+            frecuenciaCardiacaBpm = bpm,
+            saturacionOxigenoSpO2 = spo2,
+            timestamp = timestamp
+        )
+
+        Log.d(
+            "MedicionesFirebase",
+            "Enviando a Firebase: bpm=$bpm, timestamp=$timestamp"
+        )
+
         return try {
-            val response = api.enviarMedicion(
-                idDispositivo = idDispositivo,
-                authToken = "Bearer $token",
-                body = MedicionRequest(
-                    frecuenciaCardiacaBpm = bpm,
-                    saturacionOxigenoSpO2 = spo2,
-                    timestamp = timestamp
+            val response = firebaseApi.guardarUltimaMedicion(medicion)
+
+            if (response.isSuccessful) {
+                Log.d(
+                    "MedicionesFirebase",
+                    "Guardado correctamente (${response.code()})"
                 )
-            )
-            if (response.isSuccessful) Result.success(Unit)
-            else Result.failure(Exception("Error ${response.code()}"))
+                Result.success(Unit)
+            } else {
+                val error = response.errorBody()?.string()
+
+                Log.e(
+                    "MedicionesFirebase",
+                    "Error ${response.code()}: $error"
+                )
+
+                Result.failure(
+                    Exception("Firebase respondió ${response.code()}")
+                )
+            }
         } catch (e: Exception) {
+            Log.e(
+                "MedicionesFirebase",
+                "Error de conexión: ${e.message}",
+                e
+            )
             Result.failure(e)
         }
     }

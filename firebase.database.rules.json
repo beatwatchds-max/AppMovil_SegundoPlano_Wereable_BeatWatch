@@ -1,0 +1,13 @@
+{
+  "rules": {
+    "beatwatch": {
+      "$dispositivo": {
+        "ultimaMedicion": {
+          ".read": true,
+          ".write": true,
+          ".validate": "newData.hasChildren(['frecuenciaCardiacaBpm', 'timestamp']) && newData.child('frecuenciaCardiacaBpm').isNumber() && newData.child('frecuenciaCardiacaBpm').val() >= 20 && newData.child('frecuenciaCardiacaBpm').val() <= 250 && newData.child('timestamp').isString()"
+        }
+      }
+    }
+  }
+}

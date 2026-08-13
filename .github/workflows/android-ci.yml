@@ -6,9 +6,18 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-and-lint:
+  verify:
+    name: Build, Lint y pruebas
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout código
@@ -22,37 +31,52 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cache de Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar plataforma Android 36.1
+        run: sdkmanager "platforms;android-36.1"
+
+      - name: Configurar Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Dar permisos a gradlew
         run: chmod +x gradlew
 
-      - name: Compilar proyecto (debug)
-        run: ./gradlew assembleDebug
+      - name: Validar formato y reglas Firebase
+        run: |
+          git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD
+          jq empty firebase.database.rules.json
 
-      - name: Ejecutar Lint de Android
-        run: ./gradlew lint
+      - name: Compilar, analizar y ejecutar pruebas
+        run: >-
+          ./gradlew --no-daemon --stacktrace
+          clean testDebugUnitTest lintDebug assembleDebug
 
-      - name: Ejecutar pruebas unitarias
-        run: ./gradlew test
-
-      - name: Subir reporte de Lint (si falla)
-        if: failure()
+      - name: Subir reportes de verificación
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: lint-report
-          path: app/build/reports/lint-results-debug.html
+          name: verification-reports
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            app/build/reports/lint-results-debug.html
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+
+      - name: Subir APK debug
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beatwatch-debug-apk
+          retention-days: 14
+          path: app/build/outputs/apk/debug/app-debug.apk
 
   secret-scan:
+    name: Escaneo de secretos
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout código
         uses: actions/checkout@v4

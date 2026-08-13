@@ -53,7 +53,7 @@ class PairingViewModel(application: Application) : AndroidViewModel(application)
                 val codigoDispositivo = DeviceIdentity.getCodigoDispositivo(getApplication())
 
                 val request = SesionEmparejamientoRequest(
-                    numeroSerie = Build.SERIAL.takeIf { it != "unknown" } ?: Build.ID,
+                    numeroSerie = codigoDispositivo,
                     alias = "${Build.MANUFACTURER} ${Build.MODEL}",
                     tipoDispositivo = "SMARTWATCH",
                     codigoModelo = Build.MODEL,
@@ -84,7 +84,8 @@ class PairingViewModel(application: Application) : AndroidViewModel(application)
     private fun pollEstado(idSesion: String) {
         pollingJob = viewModelScope.launch {
             while (isActive) {
-                delay(2500)
+                // Evita superar el rate limit del backend durante el emparejamiento.
+                delay(5000)
                 try {
                     val secret = currentSecret ?: return@launch
                     val response = api.consultarEstado(idSesion, secret)

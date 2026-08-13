@@ -2,6 +2,7 @@ package com.example.heartratemonitor.presentation.presentation.data.network
 
 import android.content.Context
 import android.util.Log
+import com.example.heartratemonitor.presentation.presentation.data.firebase.FirebaseApiService
 import com.example.heartratemonitor.presentation.presentation.data.firebase.FirebaseClient
 import com.example.heartratemonitor.presentation.presentation.data.network.dto.MedicionRequest
 import java.text.SimpleDateFormat
@@ -10,10 +11,10 @@ import java.util.Locale
 import java.util.TimeZone
 
 class MedicionesRepository(
-    @Suppress("UNUSED_PARAMETER") context: Context
+    @Suppress("UNUSED_PARAMETER") context: Context? = null,
+    private val firebaseApi: FirebaseApiService = FirebaseClient.api,
+    private val nowProvider: () -> Date = { Date() }
 ) {
-
-    private val firebaseApi = FirebaseClient.api
 
     suspend fun enviarMedicion(
         bpm: Int,
@@ -31,7 +32,7 @@ class MedicionesRepository(
             Locale.US
         ).apply {
             timeZone = TimeZone.getTimeZone("UTC")
-        }.format(Date())
+        }.format(nowProvider())
 
         val medicion = MedicionRequest(
             frecuenciaCardiacaBpm = bpm,

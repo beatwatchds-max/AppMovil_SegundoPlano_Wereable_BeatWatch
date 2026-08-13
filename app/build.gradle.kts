@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+val firebaseDatabaseUrl = providers.gradleProperty("FIREBASE_DATABASE_URL")
+    .orElse(providers.environmentVariable("FIREBASE_DATABASE_URL"))
+    .orElse("https://bpm-g2-default-rtdb.firebaseio.com/")
+
 android {
     namespace = "com.example.heartratemonitor"
     compileSdk {
@@ -17,7 +21,11 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
+        buildConfigField(
+            "String",
+            "FIREBASE_DATABASE_URL",
+            "\"${firebaseDatabaseUrl.get()}\""
+        )
     }
 
     buildTypes {
@@ -37,6 +45,9 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -59,6 +70,8 @@ dependencies {
     debugImplementation(libs.ui.test.manifest)
     debugImplementation(libs.ui.tooling)
 
+    implementation("androidx.fragment:fragment-ktx:1.8.9")
+
     // Red
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
@@ -75,5 +88,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 
     implementation("androidx.health:health-services-client:1.1.0-alpha03")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 
 }

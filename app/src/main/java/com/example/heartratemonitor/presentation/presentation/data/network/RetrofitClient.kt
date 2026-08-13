@@ -11,6 +11,8 @@ object RetrofitClient {
     private const val BASE_URL = "https://backend-beatwatch.onrender.com/"
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        redactHeader("Authorization")
+        redactHeader("X-Watch-Secret")
         level = if (BuildConfig.DEBUG) {
             HttpLoggingInterceptor.Level.BODY
         } else {

@@ -1,11 +1,14 @@
 package com.example.heartratemonitor.presentation.presentation.data.alerts
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.example.heartratemonitor.R
+import androidx.core.content.ContextCompat
 
 object NotificationHelper {
 
@@ -23,8 +26,21 @@ object NotificationHelper {
     }
 
     fun showAlert(context: Context, title: String, message: String, notificationId: Int) {
+        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // versiones anteriores a Android 13 no requieren este permiso
+        }
+
+        if (!hasPermission) {
+            return // sin permiso, no intentamos notificar (evita el crash y el warning de Lint)
+        }
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_alert) // reemplazar por ícono propio si tienen uno
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(title)
             .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)

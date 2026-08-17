@@ -4,7 +4,9 @@ import android.Manifest
 import android.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.VibrationAttributes
@@ -19,6 +21,7 @@ object NotificationHelper {
 
     private const val CHANNEL_ID = "alertas_salud"
     private const val CHANNEL_NAME = "Alertas de salud"
+    private const val STOP_VIBRATION_REQUEST_CODE = 2001
 
     const val NOTIFICATION_ID_BPM_ALTO = 1001
 
@@ -28,18 +31,21 @@ object NotificationHelper {
             CHANNEL_NAME,
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Alertas de frecuencia cardiaca y salud"
+            description =
+                "Alertas de frecuencia cardiaca y salud"
+
+            /*
+             * La vibración se controla manualmente para
+             * poder mantenerla y detenerla desde el botón.
+             */
             enableVibration(false)
         }
 
-        context.getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(channel)
+        context.getSystemService(
+            NotificationManager::class.java
+        ).createNotificationChannel(channel)
     }
 
-    /**
-     * Mantiene el funcionamiento anterior para las alertas del cronómetro.
-     * Produce una vibración corta y publica una notificación normal.
-     */
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     fun showAlert(
         context: Context,
@@ -54,25 +60,28 @@ object NotificationHelper {
             return
         }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_dialog_alert)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(message)
-            )
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .build()
+        val notification =
+            NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_dialog_alert)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText(message)
+                )
+                .setPriority(
+                    NotificationCompat.PRIORITY_HIGH
+                )
+                .setAutoCancel(true)
+                .build()
 
         NotificationManagerCompat.from(context)
             .notify(notificationId, notification)
     }
 
     /**
-     * Publica la notificación persistente de BPM alto.
-     * La vibración se controla por separado.
+     * Muestra la alerta persistente con el botón
+     * para detener la vibración.
      */
     @RequiresPermission(Manifest.permission.POST_NOTIFICATIONS)
     fun showHighBpmNotification(
@@ -86,22 +95,51 @@ object NotificationHelper {
         }
 
         val message =
-            "Pulso elevado detectado: $bpm BPM. La alerta finalizará al bajar de 80 BPM."
+            "Pulso elevado: $bpm BPM. " +
+                    "La alerta finalizará al bajar de 80 BPM."
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_dialog_alert)
-            .setContentTitle("Pulso elevado")
-            .setContentText(message)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(message)
+        val stopIntent = Intent(
+            context,
+            StopHighBpmVibrationReceiver::class.java
+        ).apply {
+            action =
+                StopHighBpmVibrationReceiver
+                    .ACTION_STOP_HIGH_BPM_VIBRATION
+        }
+
+        val stopPendingIntent =
+            PendingIntent.getBroadcast(
+                context,
+                STOP_VIBRATION_REQUEST_CODE,
+                stopIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or
+                        PendingIntent.FLAG_IMMUTABLE
             )
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setOnlyAlertOnce(true)
-            .setOngoing(true)
-            .setAutoCancel(false)
-            .build()
+
+        val notification =
+            NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_dialog_alert)
+                .setContentTitle("Pulso elevado")
+                .setContentText(message)
+                .setStyle(
+                    NotificationCompat.BigTextStyle()
+                        .bigText(message)
+                )
+                .setPriority(
+                    NotificationCompat.PRIORITY_HIGH
+                )
+                .setCategory(
+                    NotificationCompat.CATEGORY_ALARM
+                )
+                .setOnlyAlertOnce(true)
+                .setOngoing(true)
+                .setAutoCancel(false)
+                .addAction(
+                    R.drawable.ic_media_pause,
+                    "Detener vibración",
+                    stopPendingIntent
+                )
+                .build()
 
         NotificationManagerCompat.from(context).notify(
             NOTIFICATION_ID_BPM_ALTO,
@@ -110,13 +148,12 @@ object NotificationHelper {
     }
 
     /**
-     * Inicia un patrón repetitivo.
-     *
+     * Comienza la vibración repetitiva:
      * 600 ms vibrando y 400 ms en pausa.
-     * El patrón continúa hasta llamar stopHighBpmAlert().
      */
     fun startHighBpmVibration(context: Context) {
-        val vibrator = context.getSystemService(Vibrator::class.java)
+        val vibrator =
+            context.getSystemService(Vibrator::class.java)
 
         if (!vibrator.hasVibrator()) {
             return
@@ -131,7 +168,10 @@ object NotificationHelper {
             0
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
+        ) {
             vibrator.vibrate(
                 effect,
                 VibrationAttributes.createForUsage(
@@ -144,10 +184,12 @@ object NotificationHelper {
     }
 
     /**
-     * Detiene la vibración repetitiva y elimina la notificación persistente.
+     * Detiene la vibración y elimina la notificación.
      */
     fun stopHighBpmAlert(context: Context) {
-        context.getSystemService(Vibrator::class.java).cancel()
+        context.getSystemService(
+            Vibrator::class.java
+        ).cancel()
 
         NotificationManagerCompat.from(context).cancel(
             NOTIFICATION_ID_BPM_ALTO
@@ -155,7 +197,8 @@ object NotificationHelper {
     }
 
     private fun vibrateOnce(context: Context) {
-        val vibrator = context.getSystemService(Vibrator::class.java)
+        val vibrator =
+            context.getSystemService(Vibrator::class.java)
 
         if (!vibrator.hasVibrator()) {
             return
@@ -173,7 +216,10 @@ object NotificationHelper {
             -1
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (
+            Build.VERSION.SDK_INT >=
+            Build.VERSION_CODES.TIRAMISU
+        ) {
             vibrator.vibrate(
                 effect,
                 VibrationAttributes.createForUsage(
@@ -185,8 +231,11 @@ object NotificationHelper {
         }
     }
 
-    private fun hasNotificationPermission(context: Context): Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+    private fun hasNotificationPermission(
+        context: Context
+    ): Boolean {
+        return Build.VERSION.SDK_INT <
+                Build.VERSION_CODES.TIRAMISU ||
                 ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.POST_NOTIFICATIONS

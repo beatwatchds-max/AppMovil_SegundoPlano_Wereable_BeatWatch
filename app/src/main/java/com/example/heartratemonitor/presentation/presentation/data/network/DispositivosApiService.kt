@@ -1,12 +1,12 @@
 package com.example.heartratemonitor.presentation.presentation.data.network
 
+import com.example.heartratemonitor.presentation.presentation.data.network.dto.AlertaRequest
+import com.example.heartratemonitor.presentation.presentation.data.network.dto.AlertaResponse
 import com.example.heartratemonitor.presentation.presentation.data.network.dto.EstadoEmparejamientoResponse
 import com.example.heartratemonitor.presentation.presentation.data.network.dto.MedicionRequest
 import com.example.heartratemonitor.presentation.presentation.data.network.dto.MedicionResponse
 import com.example.heartratemonitor.presentation.presentation.data.network.dto.SesionEmparejamientoRequest
 import com.example.heartratemonitor.presentation.presentation.data.network.dto.SesionEmparejamientoResponse
-import com.example.heartratemonitor.presentation.presentation.data.network.dto.AlertaRequest
-import com.example.heartratemonitor.presentation.presentation.data.network.dto.AlertaResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -25,20 +25,19 @@ interface DispositivosApiService {
     suspend fun consultarEstado(
         @Path("idSesion") idSesion: String,
         @Header("X-Watch-Secret") secret: String
-    ): Response<EstadoEmparejamientoResponse> // Response<> para poder leer el 410 manualmente
+    ): Response<EstadoEmparejamientoResponse>
 
     @POST("api/Dispositivos/{idDispositivo}/mediciones")
     suspend fun enviarMedicion(
         @Path("idDispositivo") idDispositivo: String,
-        @Header("Authorization") authToken: String,
+        @Header("X-Watch-Access-Token") watchAccessToken: String,
         @Body body: MedicionRequest
     ): Response<MedicionResponse>
 
     @POST("api/Dispositivos/{idDispositivo}/alertas")
     suspend fun enviarAlerta(
         @Path("idDispositivo") idDispositivo: String,
-        @Header("Authorization") authToken: String,
+        @Header("X-Watch-Access-Token") watchAccessToken: String,
         @Body body: AlertaRequest
     ): Response<AlertaResponse>
-
 }

@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import android.util.Log
+import com.example.heartratemonitor.BuildConfig
 
 data class HeartRateUiState(
     val bpm: Int = 0,
@@ -24,33 +26,76 @@ data class HeartRateUiState(
 class HeartRateViewModel(application: Application) : AndroidViewModel(application) {
 
     private val sensorManager = HeartRateSensorManager(application)
-    private val medicionesRepository = MedicionesRepository(application)
+   //rivate val medicionesRepository = MedicionesRepository(application)
     private val alertsRepository = AlertsRepository(application)
 
     private val _uiState = MutableStateFlow(HeartRateUiState())
     val uiState: StateFlow<HeartRateUiState> = _uiState.asStateFlow()
 
     private var lastReadingTimestamp: Long = System.currentTimeMillis()
-    private var notifiedOutOfRange = false
+    private var alertaPulsoAltoActiva = false
 
     init {
         startListening()
         startSecondsCounter()
-        startPeriodicUpload()
+        //startPeriodicUpload()  //Esta corresponde al envio periodico de cada 30seg
+
+        if (BuildConfig.DEBUG) {
+            simularAlertaPrueba()
+        }
     }
 
-    private fun startPeriodicUpload() {
+    private fun simularAlertaPrueba() {
+        val bpmPrueba = 120
+        val mensaje = "Pulso elevado: $bpmPrueba bpm (alerta de prueba)"
+
+        NotificationHelper.showAlert(
+            context = getApplication(),
+            title = "Alerta BPM de prueba",
+            message = mensaje,
+            notificationId = 1200
+        )
+
         viewModelScope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(30_000)
-                val bpmActual = _uiState.value.bpm
-                if (bpmActual > 0) {
-                    medicionesRepository.enviarMedicion(bpm = bpmActual)
-                        .onFailure { /* log o reintento silencioso, no interrumpe la UI */ }
-                }
+            // Espera para que la pantalla termine de iniciar.
+            kotlinx.coroutines.delay(3_000)
+
+            Log.d(
+                "ALERTA_PRUEBA",
+                "Enviando alerta simulada de $bpmPrueba BPM"
+            )
+
+            alertsRepository.enviarAlerta(
+                tipo = "PULSO_ANORMAL",
+                valor = bpmPrueba,
+                mensaje = mensaje
+            ).onSuccess {
+                Log.d(
+                    "ALERTA_PRUEBA",
+                    "Alerta de 120 BPM enviada correctamente"
+                )
+            }.onFailure { error ->
+                Log.e(
+                    "ALERTA_PRUEBA",
+                    "No se pudo enviar la alerta: ${error.message}",
+                    error
+                )
             }
         }
     }
+
+   //rivate fun startPeriodicUpload() {
+   //   viewModelScope.launch {
+   //       while (true) {
+   //           kotlinx.coroutines.delay(30_000)
+   //           val bpmActual = _uiState.value.bpm
+   //           if (bpmActual > 0) {
+   //               medicionesRepository.enviarMedicion(bpm = bpmActual)
+   //                   .onFailure { /* log o reintento silencioso, no interrumpe la UI */ }
+   //           }
+   //       }
+   //   }
+   //
 
     fun startListening() {
         viewModelScope.launch {
@@ -75,28 +120,53 @@ class HeartRateViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun checkBpmThreshold(bpm: Int) {
-        val fueraDeRango = bpm > HealthThresholds.BPM_MAX || bpm < HealthThresholds.BPM_MIN
 
-        if (fueraDeRango && !notifiedOutOfRange) {
-            notifiedOutOfRange = true
-            val mensaje = if (bpm > HealthThresholds.BPM_MAX) {
-                "Pulso elevado: $bpm bpm (posible arritmia)"
-            } else {
-                "Pulso bajo: $bpm bpm (posible arritmia)"
-            }
+        if (
+            bpm >= HealthThresholds.BPM_ALERTA_ALTA &&
+            !alertaPulsoAltoActiva
+        ) {
+            alertaPulsoAltoActiva = true
+
+            val mensaje = "Pulso elevado detectado: $bpm bpm"
 
             NotificationHelper.showAlert(
                 context = getApplication(),
-                title = "Pulso anormal detectado",
+                title = "Pulso elevado",
                 message = mensaje,
                 notificationId = 1001
             )
 
             viewModelScope.launch {
-                alertsRepository.enviarAlerta(tipo = "PULSO_ANORMAL", valor = bpm, mensaje = mensaje)
+                alertsRepository.enviarAlerta(
+                    tipo = "PULSO_ALTO",
+                    valor = bpm,
+                    mensaje = mensaje
+                ).onSuccess {
+                    android.util.Log.i(
+                        "ALERTA_BPM",
+                        "Alerta enviada correctamente: $bpm BPM"
+                    )
+                }.onFailure { error ->
+                    android.util.Log.e(
+                        "ALERTA_BPM",
+                        "No se pudo enviar la alerta de $bpm BPM",
+                        error
+                    )
+                }
             }
-        } else if (!fueraDeRango) {
-            notifiedOutOfRange = false
+        }
+
+        // La alerta se habilita nuevamente cuando el pulso baja a 85 BPM.
+        if (
+            alertaPulsoAltoActiva &&
+            bpm <= HealthThresholds.BPM_REARME
+        ) {
+            alertaPulsoAltoActiva = false
+
+            android.util.Log.d(
+                "ALERTA_BPM",
+                "Alerta reactivada; el pulso bajó a $bpm BPM"
+            )
         }
     }
 

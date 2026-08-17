@@ -1,8 +1,13 @@
 package com.example.heartratemonitor.presentation.presentation.data.alerts
 
 object HealthThresholds {
-    const val BPM_MIN = 40   // ajustar cuando tengan un valor clínico real
-    const val BPM_MAX = 75   // valor de prueba, ajustar después
+
+    // Genera una alerta cuando el pulso llega a 90 BPM o más.
+    const val BPM_ALERTA_ALTA = 90
+
+    // Permite generar una nueva alerta después de bajar a 85 BPM.
+    // Esto evita alertas repetidas si oscila entre 89 y 90.
+    const val BPM_REARME = 85
 
     const val LIMITE_BAJA_MINUTOS = 15
     const val LIMITE_MODERADA_MINUTOS = 25

@@ -7,8 +7,22 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <uses-permission android:name="android.permission.BODY_SENSORS" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <!-- Wear OS 5.1 y anteriores -->
+    <uses-permission
+        android:name="android.permission.BODY_SENSORS"
+        android:maxSdkVersion="35" />
+
+    <uses-permission
+        android:name="android.permission.BODY_SENSORS_BACKGROUND"
+        android:maxSdkVersion="35" />
+
+    <!-- Wear OS 6 y posteriores -->
+    <uses-permission
+        android:name="android.permission.health.READ_HEART_RATE" />
+
+    <uses-permission
+        android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+
     <uses-feature android:name="android.hardware.sensor.heartrate" android:required="true" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
@@ -49,6 +63,11 @@
         <uses-library
             android:name="com.google.android.wearable.healthservices"
             android:required="false" />
+
+        <service
+            android:name="com.example.heartratemonitor.presentation.presentation.data.sensors.PassiveHeartRateService"
+            android:exported="true"
+            android:permission="com.google.android.wearable.healthservices.permission.PASSIVE_DATA_BINDING" />
     </application>
 
 </manifest>

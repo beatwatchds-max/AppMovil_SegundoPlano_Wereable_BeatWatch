@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,15 +13,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.wear.compose.material3.AppScaffold
+import com.example.heartratemonitor.presentation.presentation.data.sensors.PassiveMonitoringManager
 import com.example.heartratemonitor.presentation.presentation.navigation.AppNavigation
 import com.example.heartratemonitor.presentation.presentation.theme.HeartRateMonitorTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
     private var hasHeartRatePermission by mutableStateOf(false)
 
-    // El nombre exacto del permiso cambia según la versión de Android/Wear OS
     private val heartRatePermission: String
         get() = if (Build.VERSION.SDK_INT >= 36) {
             "android.permission.health.READ_HEART_RATE"
@@ -28,26 +31,111 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.BODY_SENSORS
         }
 
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        hasHeartRatePermission = granted
-    }
+    private val backgroundHealthPermission: String?
+        get() = when {
+            Build.VERSION.SDK_INT >= 36 ->
+                "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
+
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+                Manifest.permission.BODY_SENSORS_BACKGROUND
+
+            else -> null
+        }
+
+    private val heartRatePermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            hasHeartRatePermission = granted
+
+            if (granted) {
+                solicitarPermisoSegundoPlano()
+            } else {
+                Log.e(
+                    TAG,
+                    "Permiso de frecuencia cardiaca rechazado"
+                )
+            }
+        }
+
+    private val backgroundPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (granted) {
+                registrarMonitoreoPasivo()
+            } else {
+                Log.e(
+                    TAG,
+                    "Permiso de sensores en segundo plano rechazado"
+                )
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        hasHeartRatePermission = ContextCompat.checkSelfPermission(
-            this, heartRatePermission
-        ) == PackageManager.PERMISSION_GRANTED
+        hasHeartRatePermission = tienePermiso(
+            heartRatePermission
+        )
 
-        if (!hasHeartRatePermission) {
-            permissionLauncher.launch(heartRatePermission)
+        if (hasHeartRatePermission) {
+            solicitarPermisoSegundoPlano()
+        } else {
+            heartRatePermissionLauncher.launch(
+                heartRatePermission
+            )
         }
 
         setContent {
             WearApp()
         }
+    }
+
+    private fun solicitarPermisoSegundoPlano() {
+        val permiso = backgroundHealthPermission
+
+        if (permiso == null) {
+            registrarMonitoreoPasivo()
+            return
+        }
+
+        if (tienePermiso(permiso)) {
+            registrarMonitoreoPasivo()
+        } else {
+            backgroundPermissionLauncher.launch(permiso)
+        }
+    }
+
+    private fun registrarMonitoreoPasivo() {
+        lifecycleScope.launch {
+            PassiveMonitoringManager
+                .registrar(applicationContext)
+                .onSuccess {
+                    Log.i(
+                        TAG,
+                        "Monitoreo pasivo registrado correctamente"
+                    )
+                }
+                .onFailure { error ->
+                    Log.e(
+                        TAG,
+                        "No se pudo registrar el monitoreo pasivo",
+                        error
+                    )
+                }
+        }
+    }
+
+    private fun tienePermiso(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    companion object {
+        private const val TAG = "PassiveMonitoring"
     }
 }
 

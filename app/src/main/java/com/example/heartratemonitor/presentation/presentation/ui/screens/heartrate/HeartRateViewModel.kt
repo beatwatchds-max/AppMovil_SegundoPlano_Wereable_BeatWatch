@@ -39,49 +39,6 @@ class HeartRateViewModel(application: Application) : AndroidViewModel(applicatio
         startListening()
         startSecondsCounter()
         //startPeriodicUpload()  //Esta corresponde al envio periodico de cada 30seg
-
-        if (BuildConfig.DEBUG) {
-            simularAlertaPrueba()
-        }
-    }
-
-    private fun simularAlertaPrueba() {
-        val bpmPrueba = 120
-        val mensaje = "Pulso elevado: $bpmPrueba bpm (alerta de prueba)"
-
-        NotificationHelper.showAlert(
-            context = getApplication(),
-            title = "Alerta BPM de prueba",
-            message = mensaje,
-            notificationId = 1200
-        )
-
-        viewModelScope.launch {
-            // Espera para que la pantalla termine de iniciar.
-            kotlinx.coroutines.delay(3_000)
-
-            Log.d(
-                "ALERTA_PRUEBA",
-                "Enviando alerta simulada de $bpmPrueba BPM"
-            )
-
-            alertsRepository.enviarAlerta(
-                tipo = "PULSO_ANORMAL",
-                valor = bpmPrueba,
-                mensaje = mensaje
-            ).onSuccess {
-                Log.d(
-                    "ALERTA_PRUEBA",
-                    "Alerta de 120 BPM enviada correctamente"
-                )
-            }.onFailure { error ->
-                Log.e(
-                    "ALERTA_PRUEBA",
-                    "No se pudo enviar la alerta: ${error.message}",
-                    error
-                )
-            }
-        }
     }
 
    //rivate fun startPeriodicUpload() {

@@ -57,6 +57,15 @@ fun ActivityTimerScreen(
                 fontSize = 40.sp,
                 fontWeight = FontWeight.Bold
             )
+            Text(
+                text = when {
+                    state.limitReached -> "Límite alcanzado"
+                    state.isRunning -> "Actividad en curso"
+                    else -> "Selecciona intensidad"
+                },
+                color = if (state.limitReached) Color.Red else Color.White,
+                fontSize = 11.sp
+            )
             Spacer(modifier = Modifier.height(4.dp))
 
             if (state.sensorAvailable) {
@@ -94,7 +103,11 @@ fun ActivityTimerScreen(
                     .clip(RoundedCornerShape(50))
             ) {
                 Text(
-                    text = if (state.isRunning) "DETENER" else "INICIAR",
+                    text = when {
+                        state.isRunning -> "DETENER"
+                        state.limitReached -> "REINICIAR"
+                        else -> "INICIAR"
+                    },
                     color = Color.Black,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp

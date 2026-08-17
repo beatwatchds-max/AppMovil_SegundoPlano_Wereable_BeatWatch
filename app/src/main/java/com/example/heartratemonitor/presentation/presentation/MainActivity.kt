@@ -19,6 +19,7 @@ import com.example.heartratemonitor.presentation.presentation.data.sensors.Passi
 import com.example.heartratemonitor.presentation.presentation.navigation.AppNavigation
 import com.example.heartratemonitor.presentation.presentation.theme.HeartRateMonitorTheme
 import kotlinx.coroutines.launch
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -55,6 +56,7 @@ class MainActivity : ComponentActivity() {
                     TAG,
                     "Permiso de frecuencia cardiaca rechazado"
                 )
+                solicitarPermisoNotificaciones()
             }
         }
 
@@ -70,9 +72,23 @@ class MainActivity : ComponentActivity() {
                     "Permiso de sensores en segundo plano rechazado"
                 )
             }
+            solicitarPermisoNotificaciones()
+        }
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (!granted) {
+                Log.w(
+                    TAG,
+                    "Permiso de notificaciones rechazado; las alertas visuales no se mostrarán"
+                )
+            }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         hasHeartRatePermission = tienePermiso(
@@ -97,13 +113,26 @@ class MainActivity : ComponentActivity() {
 
         if (permiso == null) {
             registrarMonitoreoPasivo()
+            solicitarPermisoNotificaciones()
             return
         }
 
         if (tienePermiso(permiso)) {
             registrarMonitoreoPasivo()
+            solicitarPermisoNotificaciones()
         } else {
             backgroundPermissionLauncher.launch(permiso)
+        }
+    }
+
+    private fun solicitarPermisoNotificaciones() {
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !tienePermiso(Manifest.permission.POST_NOTIFICATIONS)
+        ) {
+            notificationPermissionLauncher.launch(
+                Manifest.permission.POST_NOTIFICATIONS
+            )
         }
     }
 

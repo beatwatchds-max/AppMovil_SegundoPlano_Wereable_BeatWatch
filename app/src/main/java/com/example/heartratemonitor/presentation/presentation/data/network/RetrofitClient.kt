@@ -20,7 +20,7 @@ object RetrofitClient {
             redactHeader("X-Watch-Access-Token")
 
             level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
+                HttpLoggingInterceptor.Level.BASIC
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }

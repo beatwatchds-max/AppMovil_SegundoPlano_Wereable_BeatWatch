@@ -3,12 +3,9 @@ package com.example.heartratemonitor.presentation.presentation.ui.screens.activi
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.heartratemonitor.presentation.presentation.data.alerts.HealthThresholds
-import com.example.heartratemonitor.presentation.presentation.data.alerts.NotificationHelper
-import com.example.heartratemonitor.presentation.presentation.data.network.AlertsRepository
+import com.example.heartratemonitor.presentation.presentation.data.activity.ActivityTimerStore
+import com.example.heartratemonitor.presentation.presentation.data.activity.ActivityTrackingService
 import com.example.heartratemonitor.presentation.presentation.data.sensors.HeartRateSensorManager
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,22 +17,36 @@ data class ActivityTimerUiState(
     val elapsedSeconds: Int = 0,
     val isRunning: Boolean = false,
     val selectedIntensity: String = "Mod.",
-    val sensorAvailable: Boolean = true
+    val sensorAvailable: Boolean = true,
+    val limitReached: Boolean = false
 )
 
 class ActivityTimerViewModel(application: Application) : AndroidViewModel(application) {
 
     private val sensorManager = HeartRateSensorManager(application)
-    private val alertsRepository = AlertsRepository(application)
-
     private val _uiState = MutableStateFlow(ActivityTimerUiState())
     val uiState: StateFlow<ActivityTimerUiState> = _uiState.asStateFlow()
 
-    private var timerJob: Job? = null
-    private var alertaTiempoEnviada = false
-
     init {
+        ActivityTimerStore.initialize(application)
+        if (ActivityTimerStore.state.value.isRunning) {
+            ActivityTrackingService.resume(application)
+        }
+        observeTimer()
         listenToSensor()
+    }
+
+    private fun observeTimer() {
+        viewModelScope.launch {
+            ActivityTimerStore.state.collect { timer ->
+                _uiState.value = _uiState.value.copy(
+                    elapsedSeconds = timer.elapsedSeconds,
+                    isRunning = timer.isRunning,
+                    selectedIntensity = timer.selectedIntensity,
+                    limitReached = timer.limitReached
+                )
+            }
+        }
     }
 
     private fun listenToSensor() {
@@ -43,68 +54,29 @@ class ActivityTimerViewModel(application: Application) : AndroidViewModel(applic
             sensorManager.bpmFlow()
                 .catch { _uiState.value = _uiState.value.copy(sensorAvailable = false) }
                 .collect { bpm ->
-                    _uiState.value = _uiState.value.copy(currentBpm = bpm)
+                    _uiState.value = _uiState.value.copy(
+                        currentBpm = bpm,
+                        sensorAvailable = true
+                    )
                 }
         }
     }
 
     fun onIntensitySelected(intensity: String) {
-        _uiState.value = _uiState.value.copy(selectedIntensity = intensity)
+        if (_uiState.value.isRunning) return
+        _uiState.value = _uiState.value.copy(
+            selectedIntensity = intensity,
+            elapsedSeconds = 0,
+            limitReached = false
+        )
     }
 
     fun onIniciarPressed() {
+        val context = getApplication<Application>()
         if (_uiState.value.isRunning) {
-            stopTimer()
+            ActivityTrackingService.stop(context)
         } else {
-            startTimer()
+            ActivityTrackingService.start(context, _uiState.value.selectedIntensity)
         }
-    }
-
-    private fun startTimer() {
-        _uiState.value = _uiState.value.copy(isRunning = true, elapsedSeconds = 0)
-        alertaTiempoEnviada = false
-        timerJob = viewModelScope.launch {
-            while (true) {
-                delay(1000)
-                val nuevosSegundos = _uiState.value.elapsedSeconds + 1
-                _uiState.value = _uiState.value.copy(elapsedSeconds = nuevosSegundos)
-                checkTimeLimit(nuevosSegundos)
-            }
-        }
-    }
-
-    private fun checkTimeLimit(elapsedSeconds: Int) {
-        val limiteMinutos = HealthThresholds.limiteParaIntensidad(_uiState.value.selectedIntensity)
-        val elapsedMinutos = elapsedSeconds / 60
-
-        if (elapsedMinutos >= limiteMinutos && !alertaTiempoEnviada) {
-            alertaTiempoEnviada = true
-            val mensaje = "Actividad ${_uiState.value.selectedIntensity} excedió el límite de $limiteMinutos min"
-
-            NotificationHelper.showAlert(
-                context = getApplication(),
-                title = "Tiempo de actividad excedido",
-                message = mensaje,
-                notificationId = 1002
-            )
-
-            viewModelScope.launch {
-                alertsRepository.enviarAlerta(
-                    tipo = "TIEMPO_EXCEDIDO",
-                    valor = elapsedMinutos,
-                    mensaje = mensaje
-                )
-            }
-        }
-    }
-
-    private fun stopTimer() {
-        timerJob?.cancel()
-        _uiState.value = _uiState.value.copy(isRunning = false)
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        timerJob?.cancel()
     }
 }

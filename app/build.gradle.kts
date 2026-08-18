@@ -89,7 +89,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 
-    implementation("androidx.health:health-services-client:1.1.0-alpha03")
+    implementation("androidx.health:health-services-client:1.1.0-rc02")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")

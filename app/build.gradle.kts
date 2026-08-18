@@ -5,7 +5,7 @@ plugins {
 
 val firebaseDatabaseUrl = providers.gradleProperty("FIREBASE_DATABASE_URL")
     .orElse(providers.environmentVariable("FIREBASE_DATABASE_URL"))
-    .orElse("https://bpm-g2-default-rtdb.firebaseio.com/")
+    .orElse("https://beatwatch-ee5d4-default-rtdb.firebaseio.com/")
 
 android {
     namespace = "com.example.heartratemonitor"

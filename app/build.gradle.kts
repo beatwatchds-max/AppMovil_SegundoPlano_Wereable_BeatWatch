@@ -78,7 +78,7 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     // QR
-    implementation("com.google.zxing:core:3.5.3")
+    implementation("com.google.zxing:core:3.5.4")
 
     // Almacenamiento seguro de tokens
     implementation("androidx.security:security-crypto:1.1.0")
